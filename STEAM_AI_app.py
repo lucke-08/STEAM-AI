@@ -94,7 +94,7 @@ def send_message_to_server():
         "messages": chat_history
     }
 
-    response = requests.post("http://37.59.95.141:8155/send_message_to_bot", json=payload)
+    response = requests.post("https://SteamAI.pythonanywhere.com/send_message_to_bot", json=payload)
 
     if response.status_code == 200:
         full_response = response.json().get("response", "")
@@ -121,7 +121,13 @@ app.grid_rowconfigure(1, weight=1)
 customtkinter.set_appearance_mode("dark")
 
 
+pil_steamlogoext = Image.open(BytesIO(requests.get("https://SteamAI.pythonanywhere.com/static/steam_ai_logo.png").content))
+resized_steamlogoext = pil_steamlogoext.resize((250, 104)) #1263 x 523
+steamlogoext = customtkinter.CTkImage(light_image=resized_steamlogoext,dark_image=resized_steamlogoext,size=(75,30))
 
+pil_manuale = Image.open(BytesIO(requests.get("https://SteamAI.pythonanywhere.com/static/manual_icon.png").content))
+resized_manuale = pil_manuale.resize((50, 50)) #1263 x 523
+manuale = customtkinter.CTkImage(light_image=resized_manuale,dark_image=resized_manuale)
 
 pil_webico = Image.open(BytesIO(requests.get("https://cdn-icons-png.freepik.com/256/1006/1006771.png").content))
 resized_webico = pil_webico.resize((50, 50)) #1263 x 523
@@ -137,10 +143,10 @@ header.grid_columnconfigure(2, weight=1)
 sitebutton = customtkinter.CTkButton(header, text="Web chat", command=sitebuttoncmd, width=35, height=35, image=webico)
 sitebutton.grid(row=0, column=0, sticky="nsw", padx=(10,3), pady=10)
 
-label = customtkinter.CTkLabel(header, text="")
+label = customtkinter.CTkLabel(header, text="", image=steamlogoext)
 label.grid(row=0, column=1, sticky="nsew", pady=10, padx=0)
 
-wikibutton = customtkinter.CTkButton(header, text="Manuale", command=wikibuttoncmd, width=35, height=35)
+wikibutton = customtkinter.CTkButton(header, text="Manuale", image=manuale, command=wikibuttoncmd, width=35, height=35)
 wikibutton.grid(row=0, column=2, sticky="nse", padx=(3,10), pady=10)
 
 
@@ -156,7 +162,7 @@ bottom.grid_columnconfigure(0, weight=1)
 entry = customtkinter.CTkEntry(bottom, placeholder_text="Scrivi un messaggio allo STEAM BOT", border_color= "#4e5f69")
 entry.grid(row=0, column=0, sticky="ew", padx=(10,2), pady=0)
 
-disclaimer = customtkinter.CTkLabel(bottom, text="La STEAM AI potrebbe commettere errori siccome basata su GPT 3.5\nL'istituzione non è responsabile in caso di risposte errata", text_color="#B4B4B4")
+disclaimer = customtkinter.CTkLabel(bottom, text="La STEAM AI potrebbe commettere errori siccome basata su Groq / Llama 3\nL'istituzione non è responsabile in caso di risposte errata", text_color="#B4B4B4")
 disclaimer.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=3)
 
 sendbutton = customtkinter.CTkButton(bottom, text="Invia", command=sendbuttoncmd, width=60)

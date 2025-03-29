@@ -477,7 +477,7 @@ body {
     height: 3rem;
     width: 7.3rem;
     background-size: cover;
-    background-image: url("https://biggalaxy.net/uploads/logo_1_.png");
+    background-image: url("https://SteamAI.pythonanywhere.com/static/steam_ai_logo.png");
 }
 
 #entry:focus{
@@ -602,148 +602,153 @@ body, html {
     margin-top: 0px;
 }
   </style>
-  <script>document.addEventListener('DOMContentLoaded', function () {
-    // Elementi DOM
-    const textbox = document.getElementById('textbox');
-    const entry = document.getElementById('entry');
-    const wikiButton = document.getElementById('wikibutton');
-    const sendButton = document.getElementById('send-button');
-    //const closeButton = document.getElementById('close-button');
-    const disclaimer = document.getElementById('disclaimer');
-  
-    // Funzione per aggiornare il testo del disclaimer in base alla larghezza della finestra
-    function updateText() {
-      const windowWidth = window.innerWidth;
-      disclaimer.innerHTML = windowWidth > 800 
-        ? "La STEAM AI potrebbe commettere errori siccome basata su GPT. L'istituzione non è responsabile in caso di risposte errata" 
-        : "La STEAM AI potrebbe commettere errori siccome basata su GPT.<br>L'istituzione non è responsabile in caso di risposte errata";
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Elementi DOM
+  const textbox = document.getElementById('textbox');
+  const entry = document.getElementById('entry');
+  const wikiButton = document.getElementById('wikibutton');
+  const sendButton = document.getElementById('send-button');
+  const disclaimer = document.getElementById('disclaimer');
+
+  // Variabile globale per la cronologia della chat
+  let chatHistory = [];
+
+  // Funzione per aggiornare il testo del disclaimer in base alla larghezza della finestra
+  function updateText() {
+    const windowWidth = window.innerWidth;
+    disclaimer.innerHTML = windowWidth > 800 
+      ? "La STEAM AI potrebbe commettere errori siccome basata su Groq / Llama 3. L'istituzione non è responsabile in caso di risposte errata" 
+      : "La STEAM AI potrebbe commettere errori siccome basata su Groq / Llama 3.<br>L'istituzione non è responsabile in caso di risposte errata";
+  }
+
+  // Inizializza il testo del disclaimer
+  updateText();
+  window.addEventListener('resize', updateText);
+
+  // Funzione per aggiustare l'altezza della textarea in base al contenuto
+  function adjustTextareaHeight() {
+    entry.style.height = 'auto'; 
+    entry.style.height = `${entry.scrollHeight}px`; 
+  }
+
+  // Evento per aggiustare l'altezza della textarea quando viene digitato del testo
+  entry.addEventListener('input', function () {
+    adjustTextareaHeight();
+    this.style.height = this.scrollHeight > 38 ? `${this.scrollHeight}px` : '38px';
+
+    // Mostra o nasconde il pulsante di invio in base al contenuto della textarea
+    if (this.value.trim().length > 0) {
+      sendButton.classList.add('show');
+      entry.classList.add('show');
+    } else {
+      sendButton.classList.remove('show');
+      entry.classList.remove('show');
     }
-  
-    // Inizializza il testo del disclaimer
-    updateText();
-    window.addEventListener('resize', updateText);
-  
-    // Funzione per aggiustare l'altezza della textarea in base al contenuto
-    function adjustTextareaHeight() {
-      entry.style.height = 'auto'; 
-      entry.style.height = `${entry.scrollHeight}px`; 
-    }
-  
-    // Evento per aggiustare l'altezza della textarea quando viene digitato del testo
-    entry.addEventListener('input', function () {
-      adjustTextareaHeight();
-      this.style.height = this.scrollHeight > 38 ? `${this.scrollHeight}px` : '38px';
-  
-      // Mostra o nasconde il pulsante di invio in base al contenuto della textarea
-      if (this.value.trim().length > 0) {
-        sendButton.classList.add('show');
-        entry.classList.add('show');
-      } else {
-        sendButton.classList.remove('show');
-        entry.classList.remove('show');
-      }
-    });
-  
-    // Trigger dell'evento input per ridimensionare al caricamento della pagina
-    entry.dispatchEvent(new Event('input'));
-  
-    // Funzione per inviare il messaggio al bot
+  });
+
+  // Trigger dell'evento input per ridimensionare al caricamento della pagina
+  entry.dispatchEvent(new Event('input'));
+
+  // Funzione per inviare il messaggio al bot e aggiornare la history
   function sendMessageToBot() {
     const userMessage = entry.value.trim();
     if (userMessage.length < 1) return;
-  
-    // Aggiunge il messaggio dell'utente al DOM
-    UserMsgSend(userMessage);
-  
-    // Invia il messaggio al server
-    fetch('http://37.59.95.141:8155/send_message_to_bot', {  // Assicurati che l'IP e la porta siano corretti
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        messages: [{ 'role': 'user', 'content': userMessage }]  // Adatta la struttura del messaggio
-      }),
-    })
-    .then(response => response.json())
-    .then(data => BotMsgSend(data.response))  // Assumi che il backend risponda con { response: ... }
-    .catch(error => console.error('Error:', error));
-  
-    // Pulisce la textarea e ri-triggera l'evento input
+
+    // Aggiungi il messaggio dell'utente alla history e al DOM
+    appendUserMessage(userMessage);
+    chatHistory.push({ role: "user", content: userMessage });
     entry.value = '';
     entry.dispatchEvent(new Event('input'));
-  }
-  
-  
-    // Eventi di click per i pulsanti
-    sendButton.addEventListener('click', sendMessageToBot);
-    wikiButton.addEventListener('click', openWiki);
-    //closeButton.addEventListener('click', closeWindow);
-  
-    // Evento per inviare il messaggio con il tasto Enter, con Shift+Enter per andare a capo
-    entry.addEventListener('keypress', function (event) {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessageToBot();
-        console.log("User sent message with 'Enter' button");
-      }
+
+    // Prepara il payload con la cronologia completa
+    const payload = { messages: chatHistory };
+
+    // Invia il messaggio al server
+    fetch('https://SteamAI.pythonanywhere.com/send_message_to_bot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+      const botResponse = data.response || "Nessuna risposta dal server.";
+      appendBotMessage(botResponse);
+      chatHistory.push({ role: "assistant", content: botResponse });
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      const errorMsg = "Errore nella risposta al server.";
+      appendBotMessage(errorMsg);
+      chatHistory.push({ role: "assistant", content: errorMsg });
     });
-  
-    // Funzione per aprire il link della wiki
-    function openWiki() {
-      window.open('https://sites.google.com/view/steam-development/wiki', '_blank');
-      console.log("User opened the wiki");
+  }
+
+  // Eventi di click per i pulsanti
+  sendButton.addEventListener('click', sendMessageToBot);
+  wikiButton.addEventListener('click', openWiki);
+
+  // Evento per inviare il messaggio con il tasto Enter, con Shift+Enter per andare a capo
+  entry.addEventListener('keypress', function (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessageToBot();
+      console.log("User sent message with 'Enter' button");
     }
-  
-    // Funzione per chiudere la finestra di chat
-    function closeWindow() {
-      console.log("User closed the chat");
-    }
-  
-    // Funzione per aggiungere il messaggio del bot al DOM
-    function BotMsgSend(msg) {
-      textbox.innerHTML += `<div class="bot-box bot-box-anim bXNGeC">
-        <p class="not-hligt ddVeKf">STEAM AI</p>
-        <div class="bot-msg-box sc-19o5u7w-0 eFkXQN">
-          <figure class="bot-ico not-hligt sc-184kaec-0 cOEDyw StyledAvatar-sc-608m04-0 leOkRr">
-            <img src="https://biggalaxy.net/uploads/steam_ai_avatar.png" class="sc-184kaec-1 gepXPG">
-          </figure>
-          <div class="bot-msg sc-1t4lziz-0 cWdXBY">${msg}</div>
-        </div>
-      </div>`;
-      removeAnimationClass('.bot-box-anim');
-      console.log("Message sent in-box from bot:\n" + msg);
-    }
-  
-    // Funzione per aggiungere il messaggio dell'utente al DOM
-    function UserMsgSend(msg) {
-      textbox.innerHTML += `<div class="gaLjQV">
-        <div class="fArVzx">
-          <div class="user-box-anim jYnIYm">
-            <div class="jMwAnd">
-              <span class="Linkify">
-                <span class="iihwCM">${msg}</span>
-              </span>
-            </div>
+  });
+
+  // Funzione per aprire il link della wiki
+  function openWiki() {
+    window.open('https://sites.google.com/view/steam-development/wiki', '_blank');
+    console.log("User opened the wiki");
+  }
+
+  // Funzione per aggiungere il messaggio del bot al DOM
+  function appendBotMessage(msg) {
+    textbox.innerHTML += `<div class="bot-box bot-box-anim bXNGeC">
+      <p class="not-hligt ddVeKf">STEAM AI</p>
+      <div class="bot-msg-box sc-19o5u7w-0 eFkXQN">
+        <figure class="bot-ico not-hligt sc-184kaec-0 cOEDyw StyledAvatar-sc-608m04-0 leOkRr">
+          <img src="https://SteamAI.pythonanywhere.com/static/steam_ai_avatar.jpg" class="sc-184kaec-1 gepXPG">
+        </figure>
+        <div class="bot-msg sc-1t4lziz-0 cWdXBY">${msg}</div>
+      </div>
+    </div>`;
+    removeAnimationClass('.bot-box-anim');
+    console.log("Message sent in-box from bot:\n" + msg);
+  }
+
+  // Funzione per aggiungere il messaggio dell'utente al DOM
+  function appendUserMessage(msg) {
+    textbox.innerHTML += `<div class="gaLjQV">
+      <div class="fArVzx">
+        <div class="user-box-anim jYnIYm">
+          <div class="jMwAnd">
+            <span class="Linkify">
+              <span class="iihwCM">${msg}</span>
+            </span>
           </div>
         </div>
-      </div>`;
-      removeAnimationClass('.user-box-anim');
-      console.log("Message sent in-box from user:\n" + msg);
-    }
-  
-    // Funzione per rimuovere la classe di animazione dopo che l'animazione è terminata
-    function removeAnimationClass(selector) {
-      document.querySelectorAll(selector).forEach(message => {
-        message.addEventListener('animationend', () => {
-          message.classList.remove(selector.slice(1));
-        });
+      </div>
+    </div>`;
+    removeAnimationClass('.user-box-anim');
+    console.log("Message sent in-box from user:\n" + msg);
+  }
+
+  // Funzione per rimuovere la classe di animazione dopo che l'animazione è terminata
+  function removeAnimationClass(selector) {
+    document.querySelectorAll(selector).forEach(message => {
+      message.addEventListener('animationend', () => {
+        message.classList.remove(selector.slice(1));
       });
-    }
-  
-    // Messaggio di benvenuto del bot
-    BotMsgSend('Ciao. Hai una domanda? Sono qui per aiutare, non esitare a chiedere.');
-  });</script>
+    });
+  }
+
+  // Messaggio di benvenuto del bot
+  appendBotMessage('Ciao. Hai una domanda? Sono qui per aiutare, non esitare a chiedere.');
+});
+</script>
+
 </head>
 
 <body>
@@ -795,7 +800,7 @@ body, html {
         </button>
       </div>
       <div class="not-hligt" id="disclaimer">La STEAM AI potrebbe commettere errori siccome basata su
-        GPT.<br>L'istituzione non è responsabile in caso di risposte errata</div>
+        Groq / Llama 3.<br>L'istituzione non è responsabile in caso di risposte errata</div>
     </div>
   </div>
 </body>

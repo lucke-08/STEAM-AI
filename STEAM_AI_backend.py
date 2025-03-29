@@ -1,27 +1,32 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from openai import OpenAI
+from groq import Groq
 import requests
-import fitz
+import docx
+from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
 
-client = OpenAI(api_key="sk-apikey")
+client = Groq(api_key="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")
 
-response = requests.get("https://drive.google.com/uc?export=download&id=1gcKh-CSbVJYg1Q9A-gAyl-owhUfTkn5C")
-pdf_content = response.content
+# Scarica il file DOCX con header appropriato
+headers = {"User-Agent": "Mozilla/5.0"}
+url = "https://drive.google.com/uc?export=download&id=1gcKh-CSbVJYg1Q9A-gAyl-owhUfTkn5C"
+response = requests.get(url, headers=headers)
 
-with open('temp.pdf', 'wb') as f:
-    f.write(pdf_content)
+file_content = response.content
 
-documento = fitz.open('temp.pdf')
+# Verifica che il contenuto sia un file DOCX (gli archivi ZIP iniziano con "PK")
+if not file_content.startswith(b"PK"):
+    raise ValueError("Contenuto scaricato non valido: non sembra essere un file DOCX.")
+
+# Apri il documento DOCX direttamente dalla memoria usando BytesIO
+document = docx.Document(BytesIO(file_content))
 
 prompt = ""
-for pagina in documento:
-    prompt += pagina.get_text()
-
-documento.close()
+for paragraph in document.paragraphs:
+    prompt += paragraph.text + "\n"
 
 @app.route('/send_message_to_bot', methods=['POST'])
 def chat():
@@ -33,11 +38,11 @@ def chat():
 
     messages = data['messages']
     print(f"{request.remote_addr}: {messages[-1]['content']}")
-    messages.insert(0, {"role": "system", "content": prompt[:len(prompt)]})
+    messages.insert(0, {"role": "system", "content": prompt})
     try:
         full_response = ""
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             max_tokens=500,
             stream=True

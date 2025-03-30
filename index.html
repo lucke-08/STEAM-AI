@@ -225,10 +225,6 @@ figure {
     box-sizing: inherit;
 }
 
-* {
-    font-weight: inherit;
-}
-
 section {
     display: block;
     unicode-bidi: isolate;
@@ -601,6 +597,18 @@ body, html {
     float: center;
     margin-top: 0px;
 }
+
+
+.bot-msg-box ul {
+    padding-left: 20px; /* Sposta la lista verso destra */
+    margin-left: 0; 
+    list-style-position: inside; /* Assicura che i puntini siano dentro il fumetto */
+}
+
+.bot-msg-box li {
+    margin-bottom: 5px;
+}
+
   </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -703,8 +711,63 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log("User opened the wiki");
   }
 
-  // Funzione per aggiungere il messaggio del bot al DOM
-  function appendBotMessage(msg) {
+// Funzione per convertire Markdown-like in HTML
+function formatBotMessage(msg) {
+    // Escape per sicurezza (evita XSS)
+    msg = msg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Gestione titoli (H1, H2, H3)
+    msg = msg.replace(/^\s*####\s*(.+)$/gm, '<h4>$1</h4>'); 
+    msg = msg.replace(/^\s*###\s*(.+)$/gm, '<h3>$1</h3>'); 
+    msg = msg.replace(/^\s*##\s*(.+)$/gm, '<h2>$1</h2>');  
+    msg = msg.replace(/^\s*#\s*(.+)$/gm, '<h1>$1</h1>');  
+
+    // **Grassetto**
+    msg = msg.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+    // *Corsivo*
+    msg = msg.replace(/\*(.*?)\*/g, '<i>$1</i>');
+
+    // ***Grassetto e corsivo***
+    msg = msg.replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>');
+
+    // ~~Barrato~~
+    msg = msg.replace(/~~(.*?)~~/g, '<s>$1</s>');
+
+    // <u>Sottolineato</u>
+    msg = msg.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
+
+    // <sup>Sovrascritto</sup>
+    msg = msg.replace(/&lt;sup&gt;(.*?)&lt;\/sup&gt;/g, '<sup>$1</sup>');
+
+    // <sub>Sottoscritto</sub>
+    msg = msg.replace(/&lt;sub&gt;(.*?)&lt;\/sub&gt;/g, '<sub>$1</sub>');
+
+    // Code inline `testo`
+    msg = msg.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Liste puntate (- item o * item) - Gruppi di elementi in un'unica <ul>
+    msg = msg.replace(/(?:^|\n)([-*]) (.+)/g, function(match, bullet, item) {
+        return `<li>${item}</li>`; // Converti in <li>
+    });
+
+    // Avvolgi il tutto in una <ul> solo se ci sono <li>
+    msg = msg.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+
+
+    // Linee di separazione (--- o ***)
+    msg = msg.replace(/^\s*(---|\*\*\*)\s*$/gm, '<hr>');
+
+    // A capo \n → <br>
+    msg = msg.replace(/\n/g, '<br>');
+
+    return msg;
+}
+
+// Funzione per aggiungere il messaggio del bot al DOM
+function appendBotMessage(msg) {
+    msg = formatBotMessage(msg); // Applica il parsing del Markdown-like
+    
     textbox.innerHTML += `<div class="bot-box bot-box-anim bXNGeC">
       <p class="not-hligt ddVeKf">STEAM AI</p>
       <div class="bot-msg-box sc-19o5u7w-0 eFkXQN">
@@ -714,9 +777,11 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="bot-msg sc-1t4lziz-0 cWdXBY">${msg}</div>
       </div>
     </div>`;
+
     removeAnimationClass('.bot-box-anim');
     console.log("Message sent in-box from bot:\n" + msg);
-  }
+}
+
 
   // Funzione per aggiungere il messaggio dell'utente al DOM
   function appendUserMessage(msg) {
@@ -747,6 +812,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Messaggio di benvenuto del bot
   appendBotMessage('Ciao. Hai una domanda? Sono qui per aiutare, non esitare a chiedere.');
 });
+
 </script>
 
 </head>
